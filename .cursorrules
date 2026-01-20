@@ -1,0 +1,178 @@
+# Bedrock Coding Conventions
+
+This file defines the coding conventions and architectural patterns that must be followed in this codebase.
+
+## Import Statements
+
+- **ALWAYS place all imports at the top of the file**
+- **NEVER place imports inside functions, methods, or conditional blocks**
+- Group imports in this order:
+  1. Standard library imports
+  2. Third-party imports
+  3. Local application imports
+- Use absolute imports for local modules (e.g., `from src.services.user_service import UserService`)
+
+## Architecture Patterns
+
+### Service Layer Pattern
+- **Business logic MUST be in services, not in routes or repositories**
+- Routes are gateways that:
+  - Validate input (via Pydantic models)
+  - Call service methods
+  - Handle HTTP concerns (status codes, responses)
+  - Do NOT contain business logic
+- Repositories are data access layers that:
+  - Handle database operations
+  - Do NOT contain business logic
+  - Do NOT perform validation beyond data integrity
+
+### Dependency Injection
+- Use FastAPI's `Depends()` for dependency injection
+- Create dependency functions in `src/dependencies.py`
+- Services should receive dependencies via constructor injection
+- This enables testability and loose coupling
+
+### Repository Pattern
+- All data access goes through repository abstractions
+- Repositories implement the `BaseRepository` interface
+- Use polymorphism to switch storage backends (e.g., MongoDB, PostgreSQL)
+- Repositories return domain models, not DTOs
+
+### Error Handling
+- Use custom exception handlers in `src/exceptions/`
+- All error messages must be internationalized (i18n)
+- Error messages come from YAML translation files (`backend/translations/`)
+- Use `raise_translated_error()` for consistent error responses
+
+## Code Organization
+
+### Directory Structure
+```
+backend/src/
+├── routes/          # API route handlers (gateways only)
+├── services/        # Business logic layer
+├── repositories/    # Data access layer
+├── models/         # Domain models (Pydantic)
+├── storage/        # File storage abstractions
+├── auth/           # Authentication strategies
+├── exceptions/     # Custom exception handlers
+├── i18n/          # Internationalization
+├── logging/       # Logging infrastructure
+└── middleware/    # Request middleware
+```
+
+### File Naming
+- Use snake_case for Python files
+- Match class names to file names when possible (e.g., `user_service.py` contains `UserService`)
+
+## Type Hints
+
+- **Always use type hints** for function parameters and return types
+- Use `Optional[T]` for nullable values
+- Use `AsyncGenerator` for async generators
+- Use generic types (e.g., `Generic[T, ID]`) for reusable components
+
+## Async/Await
+
+- Use `async def` for all async functions
+- Use `await` for all async operations
+- Do not mix sync and async code unnecessarily
+- Use `AsyncClient` for async HTTP tests
+
+## Internationalization (i18n)
+
+- **All human-facing messages MUST come from YAML translation files**
+- Translation files are in `backend/translations/` (e.g., `en.yml`, `es.yml`)
+- Use `get_translator(request)` to get the translator instance
+- Use `translator.t('key', **params)` to translate messages
+- Error messages use keys like `errors.file.not_found`
+- Validation messages use keys like `validation.required`
+
+## Logging
+
+- Use structured JSON logging
+- Include correlation IDs in all log entries
+- Use the logger from `BaseService` or `get_logger(__name__)`
+- Log levels: `info`, `warning`, `error`
+- Include relevant context in `extra` parameter
+
+## Testing
+
+- All tests live under `backend/tests/`
+- Integration tests go in `backend/tests/integration/`
+- Unit tests go in `backend/tests/unit/`
+- Use `@pytest.mark.integration` for integration tests
+- Use `@pytest.mark.unit` for unit tests
+- Use fixtures from `conftest.py` for common setup
+- Tests should be independent and not rely on execution order
+- Use `async_client` fixture for async API tests
+- Use `authenticated_client` fixture for authenticated requests
+
+## File Storage
+
+- Use polymorphic `FileStorage` interface
+- Implementations: `LocalFileStore`, `S3FileStore`
+- File keys format: `uuid/original_filename.ext`
+- Always create `UploadedFile` records when files are uploaded (if repository available)
+- Validate file ownership when files are used
+
+## Authentication
+
+- Use strategy pattern for authentication providers
+- Each provider (credentials, OAuth) inherits from `AuthenticationStrategy`
+- JWT tokens for access and refresh tokens
+- Use `get_current_user` dependency for protected routes
+- Use `require_roles()` for role-based access control
+
+## MongoDB
+
+- Use `MongoRepository` for MongoDB operations
+- Map `_id` to `id` in domain models
+- Handle `None` values in updates using `$unset`
+- Use `ObjectId` for MongoDB document IDs internally
+- Convert to strings for domain models
+
+## Code Quality
+
+- Follow PEP 8 style guide
+- Use meaningful variable and function names
+- Keep functions focused and small
+- Add docstrings for public functions and classes
+- Avoid circular imports
+- Use type hints throughout
+
+## Error Responses
+
+- Use consistent error response format:
+  ```json
+  {
+    "status": "error",
+    "message": "Translated error message",
+    "errors": [...]  // For validation errors
+  }
+  ```
+- Use appropriate HTTP status codes:
+  - 400: Bad Request (validation errors)
+  - 401: Unauthorized (authentication required)
+  - 403: Forbidden (authorization failed)
+  - 404: Not Found
+  - 500: Internal Server Error
+
+## Security
+
+- Never expose sensitive information in error messages
+- Use bcrypt for password hashing
+- Validate and sanitize all user input
+- Use parameterized queries (MongoDB handles this)
+- Validate file ownership before allowing file access
+
+## When Adding New Features
+
+1. Create domain model in `src/models/domain.py`
+2. Create repository in `src/repositories/`
+3. Create service in `src/services/`
+4. Create route in `src/routes/`
+5. Add dependency injection in `src/dependencies.py`
+6. Add translation keys in `backend/translations/en.yml`
+7. Write integration tests in `backend/tests/integration/`
+8. Update API documentation (FastAPI auto-generates from docstrings)

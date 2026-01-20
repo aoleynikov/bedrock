@@ -1,0 +1,222 @@
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: bedrock_mongodb
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand({ ping: 1 })\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - bedrock_network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: bedrock_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - bedrock_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bedrock_backend
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python3", "/health_check.py", "http://localhost:8000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-env.local}
+    volumes:
+      - ./health_check.py:/health_check.py:ro
+      - ./backend/src:/app/src
+      - ./backend/storage:/app/storage
+      - ./backend/tests:/app/tests
+      - ./backend/pytest.ini:/app/pytest.ini
+      - ./backend/reports:/app/reports
+    logging: *default-logging
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - bedrock_network
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bedrock_worker
+    command: celery -A src.worker.celery worker --loglevel=info
+    ports:
+      - "8001:8001"
+    env_file:
+      - ${ENV_FILE:-env.local}
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/storage:/app/storage
+    logging: *default-logging
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - bedrock_network
+    restart: unless-stopped
+
+  beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: bedrock_beat
+    command: celery -A src.worker.celery beat --loglevel=info
+    env_file:
+      - ${ENV_FILE:-env.local}
+    volumes:
+      - ./backend/src:/app/src
+      - ./backend/storage:/app/storage
+    logging: *default-logging
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    networks:
+      - bedrock_network
+    restart: unless-stopped
+
+  frontend_user:
+    build:
+      context: ./frontend-user
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: bedrock_frontend_user
+    ports:
+      - "5173:5173"
+    healthcheck:
+      test: ["CMD", "python3", "/health_check.py", "http://localhost:5173/"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-env.local}
+    volumes:
+      - ./health_check.py:/health_check.py:ro
+      - ./frontend-user/src:/app/src
+      - ./frontend-user/index.html:/app/index.html
+      - ./frontend-user/vite.config.js:/app/vite.config.js
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - bedrock_network
+
+  frontend_admin:
+    build:
+      context: ./frontend-admin
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: bedrock_frontend_admin
+    ports:
+      - "5174:5174"
+    healthcheck:
+      test: ["CMD", "python3", "/health_check.py", "http://localhost:5174/login"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE:-env.local}
+    volumes:
+      - ./health_check.py:/health_check.py:ro
+      - ./frontend-admin/src:/app/src
+      - ./frontend-admin/index.html:/app/index.html
+      - ./frontend-admin/vite.config.js:/app/vite.config.js
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - bedrock_network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bedrock_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - bedrock_network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bedrock_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      prometheus:
+        condition: service_started
+    networks:
+      - bedrock_network
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+  rabbitmq_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  bedrock_network:
+    driver: bridge

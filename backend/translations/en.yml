@@ -1,0 +1,51 @@
+common:
+  error: "error"
+  success: "success"
+  validation_error: "Validation error"
+  validation_failed: "Validation failed"
+
+errors:
+  auth:
+    forbidden: "Forbidden"
+    unauthorized: "Unauthorized"
+  file:
+    empty: "File data is required"
+    filename_required: "Filename is required"
+    invalid_key_format: "File key must follow format: uuid/filename.ext (exactly 2 parts, no nested paths)"
+    invalid_prefix: "Avatar file must be in avatars prefix"
+    invalid_type: "File must be an image"
+    invalid_usage: "File is not marked for avatar use"
+    key_empty: "File key cannot be empty"
+    key_invalid_parts: "File key parts cannot be empty or contain path traversal sequences"
+    not_found: "File not found"
+    size_exceeds: "File size exceeds maximum allowed size ({max_size} bytes)"
+    storage_key_required: "Storage key is required"
+    storage_not_configured: "File storage service not configured"
+    too_large: "File size must be less than 5MB"
+    unauthorized: "You do not have permission to use this file"
+  storage:
+    s3_bucket_required: "S3 bucket name must be configured for S3 storage"
+  task:
+    id_required: "Task ID is required"
+    message_required: "Task message is required"
+  user:
+    email_exists: "User with this email already exists"
+    cannot_delete_self: "You cannot delete your own account"
+    not_found: "User not found"
+
+field_names:
+  email: "email"
+  name: "name"
+  password: "password"
+
+messages:
+  task_queued: "Task queued successfully"
+  user_created: "User created successfully"
+  welcome: "Welcome to Bedrock API"
+
+validation:
+  email_invalid: "value is not a valid email address"
+  password_min_length: "Password must be at least 8 characters long"
+  required: "This field is required"
+  string_max_length: "ensure this value has at most {max_length} characters"
+  string_min_length: "ensure this value has at least {min_length} characters"

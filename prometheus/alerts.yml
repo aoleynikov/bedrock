@@ -1,0 +1,51 @@
+groups:
+  - name: bedrock-core
+    rules:
+      - alert: BackendDown
+        expr: up{job="backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Backend is down
+          description: Prometheus has not scraped backend in the last minute.
+      - alert: WorkerDown
+        expr: up{job="worker"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Worker is down
+          description: Prometheus has not scraped worker in the last minute.
+      - alert: HighHttp5xxRate
+        expr: sum(rate(http_requests_total{status_code=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.02
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Elevated 5xx rate
+          description: The 5xx error rate is above 2% for 5 minutes.
+      - alert: HighHttpLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Elevated API latency
+          description: P95 HTTP latency is above 1s for 5 minutes.
+      - alert: HighTaskFailureRate
+        expr: sum(rate(celery_tasks_total{status="failure"}[5m])) / sum(rate(celery_tasks_total[5m])) > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Elevated task failure rate
+          description: Celery task failures exceed 5% for 10 minutes.
+      - alert: HighTaskLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(celery_task_duration_seconds_bucket[5m])) by (le)) > 30
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Elevated task latency
+          description: P95 task duration exceeds 30s for 10 minutes.

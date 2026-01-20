@@ -1,0 +1,17 @@
+{
+  "name": "bedrock-functional-tests",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "compose:up": "docker-compose -f ../docker-compose.yml up -d --build",
+    "compose:down": "docker-compose -f ../docker-compose.yml down",
+    "compose:wait": "node scripts/wait-for-stack.js",
+    "test:compose": "sh -c \"npm run compose:up && npm run compose:wait && npm test; status=$?; npm run compose:down; exit $status\""
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.46.1"
+  }
+}
