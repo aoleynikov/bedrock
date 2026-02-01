@@ -13,9 +13,9 @@ Production-ready full stack boilerplate with FastAPI, MongoDB, RabbitMQ, Celery,
 - User app: http://localhost:5173
 - Admin app: http://localhost:5174
 - API: http://localhost:8000 (docs at `/docs`)
-- RabbitMQ management: http://localhost:15672 (guest/guest)
+- RabbitMQ management: http://localhost:15672 (default guest/guest, change before production)
 - Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000 (admin/admin)
+- Grafana: http://localhost:3000 (default admin/admin, change before production)
 - Loki: http://localhost:3100
 
 ## Quick Start
@@ -26,6 +26,7 @@ docker-compose up --build
 ## Environment
 - Use `env.example` as a template and copy it to `env.local` for local development
 - Target a specific env file with `ENV_FILE=env.local docker-compose up`
+- Security: `env.example` includes development defaults. Replace secrets and credentials before any public or production deployment.
 
 ## Tests
 ```bash

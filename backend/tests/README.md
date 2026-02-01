@@ -6,7 +6,6 @@ This directory contains the test suite for the Bedrock backend.
 
 - `unit/` - Unit tests for individual components (services, utilities)
 - `integration/` - Integration tests for API routes and database operations
-- `fixtures/` - Shared test fixtures (if needed)
 - `conftest.py` - Pytest configuration and shared fixtures
 
 ## Running Tests
