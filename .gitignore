@@ -57,6 +57,8 @@ logs/
 .pytest_cache/
 backend/reports/
 functional_tests/test-results/
+functional_tests/coverage/
+functional_tests/coverage-report/
 
 # Local uploads
 backend/storage/uploads/

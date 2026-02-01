@@ -12,11 +12,19 @@ class ContextLogger(logging.LoggerAdapter):
         return msg, kwargs
 
 
+def configure_root_logger() -> None:
+    root_logger = logging.getLogger()
+    root_logger.setLevel(DEFAULT_LOG_LEVEL)
+    if not root_logger.handlers:
+        root_logger.addHandler(create_stdout_handler())
+
+
 def get_logger(name: str, log_type: str = 'app') -> ContextLogger:
     logger = logging.getLogger(name)
     logger.setLevel(DEFAULT_LOG_LEVEL)
 
     if not logger.handlers:
         logger.addHandler(create_stdout_handler())
+    logger.propagate = False
 
     return ContextLogger(logger, {})

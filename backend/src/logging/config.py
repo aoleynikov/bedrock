@@ -1,10 +1,13 @@
 import os
-from logging import INFO, DEBUG
+from logging import INFO, DEBUG, WARNING, ERROR, CRITICAL
 
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 LOG_LEVEL_MAP = {
     'DEBUG': DEBUG,
     'INFO': INFO,
+    'WARNING': WARNING,
+    'ERROR': ERROR,
+    'CRITICAL': CRITICAL,
 }
 
 DEFAULT_LOG_LEVEL = LOG_LEVEL_MAP.get(LOG_LEVEL, INFO)

@@ -1,6 +1,9 @@
+import logging
 from celery import Celery
+from celery.signals import setup_logging
 from celery.schedules import crontab
 from src.config import settings
+from src.logging.logger import configure_root_logger
 from src.tasks.celery import metrics_server
 
 celery_app = Celery(
@@ -18,6 +21,8 @@ celery_app.conf.update(
     task_track_started=True,
     task_time_limit=30 * 60,
     task_soft_time_limit=25 * 60,
+    worker_hijack_root_logger=False,
+    worker_redirect_stdouts=False,
     imports=('src.tasks.example_task', 'src.tasks.file_cleanup.task', 'src.tasks.file_cleanup.pagination', 'src.tasks.ensure_admin', 'src.tasks.startup'),
     autodiscover_tasks=['src.tasks'],
     beat_schedule={
@@ -28,3 +33,9 @@ celery_app.conf.update(
         },
     },
 )
+
+
+@setup_logging.connect
+def _configure_celery_logging(*args, **kwargs):
+    configure_root_logger()
+    logging.getLogger('celery').setLevel(logging.INFO)

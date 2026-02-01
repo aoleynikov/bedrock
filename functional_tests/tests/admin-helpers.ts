@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test'
+import { expect, Page } from './test-fixtures'
 
 const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com'
 const adminPassword = process.env.ADMIN_PASSWORD || 'admin1234'

@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test-fixtures'
 import { adminCredentials, loginAsAdmin } from './admin-helpers'
 
 test.beforeEach(async ({ page }) => {
@@ -28,6 +28,28 @@ test('admin can create and delete a user', async ({ page }) => {
 
   const userRow = page.locator('.row', { hasText: email })
   await expect(userRow).toBeVisible()
+  await userRow.getByRole('button', { name: 'Delete' }).click()
+  await expect(userRow).toHaveCount(0)
+})
+
+test('admin can create an admin user', async ({ page }) => {
+  const timestamp = Date.now()
+  const email = `playwright-admin-${timestamp}@example.com`
+  const name = `Playwright Admin ${timestamp}`
+
+  await page.getByRole('button', { name: 'Create user' }).click()
+
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByRole('heading', { name: 'Create user' })).toBeVisible()
+  await dialog.getByLabel('Email').fill(email)
+  await dialog.getByLabel('Name').fill(name)
+  await dialog.getByLabel('Password').fill('password123')
+  await dialog.getByLabel('Role').selectOption('admin')
+  await dialog.getByRole('button', { name: 'Create user' }).click()
+
+  const userRow = page.locator('.row', { hasText: email })
+  await expect(userRow).toBeVisible()
+  await expect(userRow.locator('.role')).toHaveText('admin')
   await userRow.getByRole('button', { name: 'Delete' }).click()
   await expect(userRow).toHaveCount(0)
 })

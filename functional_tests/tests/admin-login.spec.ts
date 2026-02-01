@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './test-fixtures'
 import { adminBackendUrl, adminCredentials, loginAsAdmin } from './admin-helpers'
 
 test('admin login page loads', async ({ page }) => {
