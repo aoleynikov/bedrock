@@ -54,6 +54,7 @@ logs/
 
 # Tests and reports
 .pytest_cache/
+backend/.coverage
 backend/reports/
 functional_tests/test-results/
 functional_tests/coverage/
