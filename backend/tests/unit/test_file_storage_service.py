@@ -6,6 +6,24 @@ from src.services.file_storage_service import FileStorageService
 from src.storage.local_file_store import LocalFileStore
 
 
+class AsyncBytesReader:
+    def __init__(self, data: bytes):
+        self.data = data
+        self.offset = 0
+
+    async def read(self, size: int):
+        if self.offset >= len(self.data):
+            return b''
+        chunk = self.data[self.offset:self.offset + size]
+        self.offset += len(chunk)
+        return chunk
+
+
+class FailingUploadedFileRepository:
+    async def create(self, uploaded_file):
+        raise RuntimeError('create failed')
+
+
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestFileStorageService:
@@ -159,4 +177,36 @@ class TestFileStorageService:
         assert result['file_key'].endswith('/test.jpg')
         parts = result['file_key'].split('/')
         assert len(parts) == 2
+
+    async def test_store_file_stream_cleanup_on_size_exceeds(self, temp_storage):
+        file_storage_service = FileStorageService(temp_storage)
+        file_data = b'x' * 1024
+        file_stream = AsyncBytesReader(file_data)
+        custom_key = '550e8400-e29b-41d4-a716-446655440000/large.txt'
+
+        with pytest.raises(ValueError, match='errors.file.size_exceeds'):
+            await file_storage_service.store_file_stream(
+                file_stream=file_stream,
+                custom_key=custom_key,
+                max_size=10
+            )
+
+        exists = await file_storage_service.file_exists(custom_key)
+        assert exists is False
+
+    async def test_store_file_stream_cleanup_on_record_failure(self, temp_storage):
+        file_storage_service = FileStorageService(temp_storage, FailingUploadedFileRepository())
+        file_data = b'content'
+        file_stream = AsyncBytesReader(file_data)
+        custom_key = '550e8400-e29b-41d4-a716-446655440000/record.txt'
+
+        with pytest.raises(ValueError, match='errors.file.record_create_failed'):
+            await file_storage_service.store_file_stream(
+                file_stream=file_stream,
+                custom_key=custom_key,
+                owner_id='user-1'
+            )
+
+        exists = await file_storage_service.file_exists(custom_key)
+        assert exists is False
     

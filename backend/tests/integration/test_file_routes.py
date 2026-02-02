@@ -130,6 +130,62 @@ class TestFileRoutes:
         assert response.status_code == 200
         assert response.headers['content-type'].startswith('image/')
         assert len(response.content) > 0
+
+    async def test_get_file_unauthorized(self, authenticated_client: AsyncClient, async_client: AsyncClient):
+        """Test retrieving a file without authentication."""
+        file_data = b'private file content'
+        upload_response = await authenticated_client.post(
+            '/api/files/upload',
+            files={'file': ('private.txt', file_data, 'text/plain')}
+        )
+        file_key = upload_response.json()['file_key']
+
+        original_auth = async_client.headers.get('Authorization')
+        async_client.headers.pop('Authorization', None)
+        response = await async_client.get(f'/api/files/{file_key}')
+        if original_auth:
+            async_client.headers.update({'Authorization': original_auth})
+
+        assert response.status_code == 401
+
+    async def test_get_file_forbidden_for_other_user(self, async_client: AsyncClient, authenticated_client: AsyncClient):
+        """Test retrieving another user's file is forbidden."""
+        create_response = await async_client.post(
+            '/api/users',
+            json={
+                'email': 'file-owner@example.com',
+                'name': 'File Owner',
+                'password': 'password123'
+            }
+        )
+        assert create_response.status_code == 201
+
+        login_response = await async_client.post(
+            '/api/auth/login',
+            json={
+                'email': 'file-owner@example.com',
+                'password': 'password123',
+                'strategy': 'credentials'
+            }
+        )
+        assert login_response.status_code == 200
+        other_token = login_response.json()['access_token']
+
+        original_auth = async_client.headers.get('Authorization')
+        async_client.headers.update({'Authorization': f'Bearer {other_token}'})
+        upload_response = await async_client.post(
+            '/api/files/upload',
+            files={'file': ('owned.txt', b'owned content', 'text/plain')}
+        )
+        file_key = upload_response.json()['file_key']
+        if original_auth:
+            async_client.headers.update({'Authorization': original_auth})
+        else:
+            async_client.headers.pop('Authorization', None)
+
+        response = await authenticated_client.get(f'/api/files/{file_key}')
+
+        assert response.status_code == 403
     
     async def test_get_file_different_content_types(self, authenticated_client: AsyncClient):
         """Test retrieving files with different content types."""
@@ -244,6 +300,15 @@ class TestFileRoutes:
         # First part should be a UUID (36 chars with dashes)
         assert len(parts[0]) == 36
         assert parts[0].count('-') == 4
+
+    async def test_upload_url_invalid_used_for(self, authenticated_client: AsyncClient):
+        """Test upload URL rejects invalid used_for."""
+        response = await authenticated_client.get(
+            '/api/files/upload-url',
+            params={'filename': 'photo.jpg', 'used_for': 'unknown'}
+        )
+
+        assert response.status_code == 400
     
     async def test_get_file_not_found(self, authenticated_client: AsyncClient):
         """Test retrieving non-existent file."""
@@ -270,6 +335,18 @@ class TestFileRoutes:
         )
         
         assert response.status_code == 401
+
+    async def test_upload_invalid_used_for(self, authenticated_client: AsyncClient):
+        """Test upload rejects invalid used_for."""
+        file_data = b'test content'
+
+        response = await authenticated_client.post(
+            '/api/files/upload',
+            files={'file': ('test.txt', file_data, 'text/plain')},
+            params={'used_for': 'unknown'}
+        )
+
+        assert response.status_code == 400
     
     async def test_upload_file_too_large(self, authenticated_client: AsyncClient):
         """Test file size validation."""

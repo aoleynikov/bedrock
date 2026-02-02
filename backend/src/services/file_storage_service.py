@@ -100,11 +100,20 @@ class FileStorageService(BaseService):
                 )
                 await self.uploaded_file_repository.create(uploaded_file)
             except Exception as e:
+                try:
+                    await self.file_storage.delete(stored_key)
+                except Exception as delete_error:
+                    self._log_warning(
+                        f'Failed to delete file after record creation error: {stored_key}',
+                        error=delete_error,
+                        owner_id=owner_id
+                    )
                 self._log_warning(
                     f'Failed to create UploadedFile record: {stored_key}',
                     error=e,
                     owner_id=owner_id
                 )
+                raise ValueError('errors.file.record_create_failed') from e
         
         self._log_info(
             f'File stored: {stored_key}',
@@ -161,7 +170,18 @@ class FileStorageService(BaseService):
                 yield chunk
         
         # Store the file from stream with size tracking
-        stored_key = await self.file_storage.store_stream(key, size_tracking_stream(), content_type)
+        try:
+            stored_key = await self.file_storage.store_stream(key, size_tracking_stream(), content_type)
+        except Exception as e:
+            try:
+                await self.file_storage.delete(key)
+            except Exception as delete_error:
+                self._log_warning(
+                    f'Failed to delete file after stream error: {key}',
+                    error=delete_error,
+                    owner_id=owner_id
+                )
+            raise
         
         # Create UploadedFile record if repository is available and owner_id is provided
         if self.uploaded_file_repository and owner_id:
@@ -178,11 +198,20 @@ class FileStorageService(BaseService):
                 )
                 await self.uploaded_file_repository.create(uploaded_file)
             except Exception as e:
+                try:
+                    await self.file_storage.delete(stored_key)
+                except Exception as delete_error:
+                    self._log_warning(
+                        f'Failed to delete file after record creation error: {stored_key}',
+                        error=delete_error,
+                        owner_id=owner_id
+                    )
                 self._log_warning(
                     f'Failed to create UploadedFile record: {stored_key}',
                     error=e,
                     owner_id=owner_id
                 )
+                raise ValueError('errors.file.record_create_failed') from e
         
         self._log_info(
             f'File stored from stream: {stored_key}',
@@ -311,6 +340,13 @@ class FileStorageService(BaseService):
             return parts[-1]
         else:
             return key
+
+    def sanitize_filename_for_header(self, filename: str) -> str:
+        if not filename:
+            raise ValueError('errors.file.filename_required')
+        path = Path(filename)
+        name = path.name
+        return name.replace('\r', '').replace('\n', '').replace('"', '')
     
     async def generate_upload_url(
         self,

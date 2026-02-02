@@ -49,6 +49,11 @@ async def get_upload_url(
     Gateway: HTTP endpoint -> Service layer
     """
     translator = get_translator(request)
+    if used_for and used_for not in ALLOWED_FILE_USAGE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=translator.t('errors.file.invalid_usage_value') if translator else 'Invalid file usage'
+        )
     try:
         result = await file_storage_service.generate_upload_url(
             filename=filename,
@@ -65,6 +70,7 @@ async def get_upload_url(
 
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+ALLOWED_FILE_USAGE = {'avatar', 'document'}
 
 
 @router.post('/files/upload', response_model=FileUploadResponse)
@@ -93,9 +99,19 @@ async def upload_file(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=translator.t('errors.file.empty') if translator else 'File is required'
         )
+    if used_for and used_for not in ALLOWED_FILE_USAGE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=translator.t('errors.file.invalid_usage_value') if translator else 'Invalid file usage'
+        )
     
     try:
-        original_filename = file.filename or 'upload'
+        original_filename = file.filename.strip()
+        if not original_filename:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=translator.t('errors.file.filename_required') if translator else 'Filename is required'
+            )
         # Extract prefix from query params if provided
         prefix = request.query_params.get('prefix', '')
         file_key, original_filename = file_storage_service.prepare_upload_key(
@@ -216,6 +232,7 @@ async def delete_avatar(
 async def get_file(
     request: Request,
     file_key: str,
+    current_user: User = Depends(get_current_user),
     file_storage_service: FileStorageService = Depends(get_file_storage_service)
 ):
     """
@@ -225,6 +242,21 @@ async def get_file(
     """
     translator = get_translator(request)
     try:
+        uploaded_file = await file_storage_service.get_file_by_key(file_key)
+        if not uploaded_file:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=translator.t('errors.file.not_found') if translator else 'File not found'
+            )
+
+        file_owner_id = str(uploaded_file.owner_id) if uploaded_file.owner_id else None
+        current_user_id = str(current_user.id) if current_user.id else None
+        if file_owner_id != current_user_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=translator.t('errors.file.unauthorized') if translator else 'You do not have permission to use this file'
+            )
+
         file_data = await file_storage_service.retrieve_file(file_key)
         
         if file_data is None:
@@ -235,6 +267,7 @@ async def get_file(
         
         # Extract original filename from key
         original_filename = file_storage_service.extract_original_filename(file_key)
+        safe_filename = file_storage_service.sanitize_filename_for_header(original_filename)
         
         # Determine content type from file extension
         content_type = get_content_type(original_filename)
@@ -243,7 +276,7 @@ async def get_file(
             content=file_data,
             media_type=content_type,
             headers={
-                'Content-Disposition': f'inline; filename="{original_filename}"'
+                'Content-Disposition': f'inline; filename="{safe_filename}"'
             }
         )
     except ValueError as e:
