@@ -3,6 +3,7 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
+    env: str = 'local'
     mongodb_url: str = 'mongodb://localhost:27017'
     mongodb_db_name: str = 'bedrock'
     rabbitmq_url: str = 'amqp://guest:guest@localhost:5672//'

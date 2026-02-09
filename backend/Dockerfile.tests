@@ -1,0 +1,9 @@
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY src/ ./src/
+COPY tests/ ./tests/
+COPY pytest.ini ./pytest.ini
+ENV PYTHONUNBUFFERED=1
+CMD ["python", "-m", "pytest", "-o", "addopts=", "tests/unit", "-m", "unit", "-v", "--strict-markers", "--tb=short", "--asyncio-mode=auto", "--cov=src", "--cov-report=term-missing", "--cov-report=term"]

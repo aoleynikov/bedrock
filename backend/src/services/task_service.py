@@ -1,8 +1,10 @@
 from typing import Optional, Dict, Any
 from celery.result import AsyncResult
+from src.config import settings
 from src.services.base import BaseService
 from src.tasks.queue import enqueue
 from src.tasks.celery.celery_app import celery_app
+from src.tasks.queue_backend import get_in_memory_queue_backend
 
 
 class TaskService(BaseService):
@@ -46,7 +48,16 @@ class TaskService(BaseService):
         """
         if not task_id:
             raise ValueError('errors.task.id_required')
-        
+
+        if settings.env.lower() == 'test':
+            task = get_in_memory_queue_backend().get_task(task_id)
+            if not task:
+                raise ValueError('errors.task.not_found')
+            return {
+                'task_id': task_id,
+                'status': 'PENDING',
+            }
+
         result = AsyncResult(task_id, app=celery_app)
         
         # For RPC backend, we can't reliably check if task exists

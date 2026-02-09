@@ -1,5 +1,5 @@
 from typing import Any, Optional
-from src.tasks.celery.celery_app import celery_app
+from src.tasks.queue_backend import get_queue_backend
 from src.logging.correlation import get_correlation_id
 
 
@@ -9,4 +9,4 @@ def enqueue(task_name: str, *args, correlation_id: Optional[str] = None, **kwarg
     
     kwargs['correlation_id'] = correlation_id
     
-    return celery_app.send_task(task_name, args=args, kwargs=kwargs)
+    return get_queue_backend().send_task(task_name, *args, **kwargs)
