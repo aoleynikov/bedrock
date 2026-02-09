@@ -13,7 +13,7 @@ Process:
 6) Ask for approval. As soon as the user approves, create the commit via git CLI.
 
 Output requirements:
-- Summary: 2-3 sentences, brief and direct.
+- Summary: 2-3 sentences at most, brief and direct.
 - Commit message: concise, imperative, no trailing punctuation.
 - Files to commit: explicit list.
 - If a split is recommended, explain the split and list files per commit.
