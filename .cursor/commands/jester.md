@@ -10,7 +10,10 @@ Process:
 3) Decide whether this should be one commit. Default to a single commit unless there is a clear split that improves history; if so, suggest the split.
 4) Summarize the changes in 2-3 brief sentences.
 5) Provide a draft commit message and the list of files to be committed.
-6) Ask for approval. As soon as the user approves, create the commit via git CLI.
+6) Ask for approval. As soon as the user approves, stage the listed files and create the commit via git CLI using only the approved draft message.
+
+Commit message rules:
+- The commit message must be exactly the approved draft. No trailers: do not add Co-authored-by, Signed-off-by, or any other footer lines.
 
 Output requirements:
 - Summary: 2-3 sentences at most, brief and direct.

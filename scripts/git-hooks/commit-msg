@@ -1,0 +1,14 @@
+#!/bin/sh
+# Strip Co-authored-by, Signed-off-by, and similar trailers from the commit message.
+# Cursor (and some other tools) append these; this hook keeps the message clean.
+# Install: cp scripts/git-hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+
+msgfile="$1"
+[ -f "$msgfile" ] || exit 0
+
+# Remove common trailer lines (at start of line, then colon and rest of line)
+# Use a temp file because sed -i behavior differs on macOS vs Linux
+tmp=$(mktemp) || exit 1
+grep -v -E '^(Co-authored-by|Signed-off-by|Reviewed-by|Acked-by):' "$msgfile" > "$tmp" && mv "$tmp" "$msgfile"
+
+exit 0
