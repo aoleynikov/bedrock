@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from pydantic_core import PydanticCustomError
 from typing import Optional, Literal
 from datetime import datetime
@@ -25,28 +25,28 @@ class AdminUserCreate(UserCreate):
 
 
 class User(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: Optional[str] = None
     hashed_password: str
     avatar_file_key: Optional[str] = None
     role: Literal['user', 'admin'] = 'user'
     created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-
 
 class UserResponse(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     avatar_file_key: Optional[str] = None
     avatar_url: Optional[str] = None
     role: Literal['user', 'admin'] = 'user'
     created_at: Optional[datetime] = None
 
-    class Config:
-        from_attributes = True
-
 
 class UploadedFile(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: Optional[str] = None
     file_key: str
     owner_id: str
@@ -55,6 +55,3 @@ class UploadedFile(BaseModel):
     file_size: int
     used_for: Optional[str] = None
     created_at: Optional[datetime] = None
-
-    class Config:
-        from_attributes = True

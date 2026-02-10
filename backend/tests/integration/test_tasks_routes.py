@@ -72,3 +72,44 @@ class TestTasksRoutes:
         data = response.json()
         # Status can be 'error' (translated) or 'common.error' (translation key)
         assert data['status'] in ('error', 'common.error')
+
+    async def test_trigger_cleanup_admin_success(self, admin_client: AsyncClient):
+        """Test admin can trigger cleanup task."""
+        response = await admin_client.post(
+            '/api/tasks/cleanup',
+            params={'max_age_hours': 6}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert 'task_id' in data
+        assert data['status'] == 'pending'
+        assert data['max_age_hours'] == 6
+        assert 'message' in data
+
+    async def test_trigger_cleanup_forbidden(self, authenticated_client: AsyncClient):
+        """Test non-admin cannot trigger cleanup task."""
+        response = await authenticated_client.post(
+            '/api/tasks/cleanup',
+            params={'max_age_hours': 6}
+        )
+        assert response.status_code == 403
+        data = response.json()
+        assert data['status'] in ('error', 'common.error')
+
+    async def test_trigger_cleanup_unauthorized(self, async_client: AsyncClient):
+        """Test unauthenticated request cannot trigger cleanup task."""
+        response = await async_client.post(
+            '/api/tasks/cleanup',
+            params={'max_age_hours': 6}
+        )
+        assert response.status_code == 401
+
+    async def test_trigger_cleanup_invalid_max_age(self, admin_client: AsyncClient):
+        """Test cleanup with invalid max_age_hours returns validation error."""
+        response = await admin_client.post(
+            '/api/tasks/cleanup',
+            params={'max_age_hours': 0}
+        )
+        assert response.status_code == 400
+        data = response.json()
+        assert 'detail' in data

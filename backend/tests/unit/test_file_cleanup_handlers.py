@@ -35,7 +35,7 @@ class FakeFileStorageService:
         return self.delete_results.get(key, True)
 
 
-class TestCleanupHandler(FileCleanupHandler):
+class StubCleanupHandler(FileCleanupHandler):
     def __init__(self, uploaded_file_repository, file_storage_service, used_map):
         super().__init__(uploaded_file_repository, file_storage_service)
         self.used_map = used_map
@@ -76,7 +76,7 @@ class TestFileCleanupHandler:
         ]
         repo = FakeUploadedFileRepository(files)
         storage = FakeFileStorageService(delete_results={'deleted-file': True, 'failed-file': False})
-        handler = TestCleanupHandler(repo, storage, {'used-file': True})
+        handler = StubCleanupHandler(repo, storage, {'used-file': True})
 
         result = await handler.cleanup_files(max_age_hours=6, skip=0, limit=10)
 
