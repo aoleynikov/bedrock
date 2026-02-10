@@ -3,6 +3,9 @@ from httpx import AsyncClient
 from io import BytesIO
 from PIL import Image
 
+from tests.integration.user_helpers import clear_auth
+
+
 
 @pytest.mark.integration
 class TestFileRoutes:
@@ -59,9 +62,9 @@ class TestFileRoutes:
         
         assert response.status_code == 404
     
-    async def test_upload_avatar_unauthorized(self, async_client: AsyncClient):
+    async def test_upload_avatar_unauthorized(self, client: AsyncClient):
         """Test avatar upload without authentication."""
-        response = await async_client.post(
+        response = await client.post(
             '/api/users/me/avatar',
             json={'file_key': '550e8400-e29b-41d4-a716-446655440000/test.jpg'}
         )
@@ -80,18 +83,15 @@ class TestFileRoutes:
         upload_url_data = upload_url_response.json()
         file_key = upload_url_data['file_key']
         upload_url = upload_url_data['upload_url']
-        
         await authenticated_client.post(
             upload_url,
             files={'file': ('avatar.png', image_data, 'image/png')},
-            params={'used_for': 'avatar'}
+            params={'used_for': 'avatar'},
         )
-        
         await authenticated_client.post(
             '/api/users/me/avatar',
-            json={'file_key': file_key}
+            json={'file_key': file_key},
         )
-        
         # Then delete it
         response = await authenticated_client.delete('/api/users/me/avatar')
         
@@ -112,18 +112,15 @@ class TestFileRoutes:
         upload_url_data = upload_url_response.json()
         file_key = upload_url_data['file_key']
         upload_url = upload_url_data['upload_url']
-        
         await authenticated_client.post(
             upload_url,
             files={'file': ('avatar.png', image_data, 'image/png')},
-            params={'used_for': 'avatar'}
+            params={'used_for': 'avatar'},
         )
-        
         await authenticated_client.post(
             '/api/users/me/avatar',
-            json={'file_key': file_key}
+            json={'file_key': file_key},
         )
-        
         # Get the file
         response = await authenticated_client.get(f'/api/files/{file_key}')
         
@@ -131,58 +128,27 @@ class TestFileRoutes:
         assert response.headers['content-type'].startswith('image/')
         assert len(response.content) > 0
 
-    async def test_get_file_unauthorized(self, authenticated_client: AsyncClient, async_client: AsyncClient):
+    async def test_get_file_unauthorized(self, authenticated_client: AsyncClient, client: AsyncClient):
         """Test retrieving a file without authentication."""
         file_data = b'private file content'
         upload_response = await authenticated_client.post(
             '/api/files/upload',
-            files={'file': ('private.txt', file_data, 'text/plain')}
+            files={'file': ('private.txt', file_data, 'text/plain')},
         )
         file_key = upload_response.json()['file_key']
-
-        original_auth = async_client.headers.get('Authorization')
-        async_client.headers.pop('Authorization', None)
-        response = await async_client.get(f'/api/files/{file_key}')
-        if original_auth:
-            async_client.headers.update({'Authorization': original_auth})
-
+        clear_auth(client)
+        response = await client.get(f'/api/files/{file_key}')
         assert response.status_code == 401
 
-    async def test_get_file_forbidden_for_other_user(self, async_client: AsyncClient, authenticated_client: AsyncClient):
+    async def test_get_file_forbidden_for_other_user(
+        self, authenticated_client: AsyncClient, other_user_client: AsyncClient
+    ):
         """Test retrieving another user's file is forbidden."""
-        create_response = await async_client.post(
-            '/api/users',
-            json={
-                'email': 'file-owner@example.com',
-                'name': 'File Owner',
-                'password': 'password123'
-            }
-        )
-        assert create_response.status_code == 201
-
-        login_response = await async_client.post(
-            '/api/auth/login',
-            json={
-                'email': 'file-owner@example.com',
-                'password': 'password123',
-                'strategy': 'credentials'
-            }
-        )
-        assert login_response.status_code == 200
-        other_token = login_response.json()['access_token']
-
-        original_auth = async_client.headers.get('Authorization')
-        async_client.headers.update({'Authorization': f'Bearer {other_token}'})
-        upload_response = await async_client.post(
+        upload_response = await other_user_client.post(
             '/api/files/upload',
-            files={'file': ('owned.txt', b'owned content', 'text/plain')}
+            files={'file': ('owned.txt', b'owned content', 'text/plain')},
         )
         file_key = upload_response.json()['file_key']
-        if original_auth:
-            async_client.headers.update({'Authorization': original_auth})
-        else:
-            async_client.headers.pop('Authorization', None)
-
         response = await authenticated_client.get(f'/api/files/{file_key}')
 
         assert response.status_code == 403
@@ -316,20 +282,20 @@ class TestFileRoutes:
         
         assert response.status_code == 404
     
-    async def test_upload_url_unauthorized(self, async_client: AsyncClient):
+    async def test_upload_url_unauthorized(self, client: AsyncClient):
         """Test upload URL endpoint requires authentication."""
-        response = await async_client.get(
+        response = await client.get(
             '/api/files/upload-url',
             params={'filename': 'test.jpg'}
         )
         
         assert response.status_code == 401
     
-    async def test_upload_unauthorized(self, async_client: AsyncClient):
+    async def test_upload_unauthorized(self, client: AsyncClient):
         """Test upload endpoint requires authentication."""
         file_data = b'test content'
         
-        response = await async_client.post(
+        response = await client.post(
             '/api/files/upload',
             files={'file': ('test.txt', file_data, 'text/plain')}
         )
@@ -383,12 +349,10 @@ class TestFileRoutes:
         upload_url_data = upload_url_response.json()
         file_key = upload_url_data['file_key']
         upload_url = upload_url_data['upload_url']
-        
         await authenticated_client.post(
             upload_url,
-            files={'file': ('test.txt', file_data, 'text/plain')}
+            files={'file': ('test.txt', file_data, 'text/plain')},
         )
-        
         # Try to set it as avatar (should fail)
         response = await authenticated_client.post(
             '/api/users/me/avatar',
@@ -409,13 +373,11 @@ class TestFileRoutes:
         upload_url_data = upload_url_response.json()
         file_key = upload_url_data['file_key']
         upload_url = upload_url_data['upload_url']
-        
         await authenticated_client.post(
             upload_url,
             files={'file': ('document.png', image_data, 'image/png')},
-            params={'used_for': 'document'}
+            params={'used_for': 'document'},
         )
-        
         # Try to set it as avatar (should fail because used_for != 'avatar')
         response = await authenticated_client.post(
             '/api/users/me/avatar',
@@ -426,70 +388,27 @@ class TestFileRoutes:
         data = response.json()
         assert 'status' in data or 'detail' in data
     
-    async def test_avatar_ownership_validation(self, async_client: AsyncClient, authenticated_client: AsyncClient):
+    async def test_avatar_ownership_validation(
+        self, authenticated_client: AsyncClient, other_user_client: AsyncClient
+    ):
         """Test avatar endpoint validates file ownership."""
-        # Arrange: Create another user via API and upload file as that user
-        create_response = await async_client.post(
-            '/api/users',
-            json={
-                'email': 'other@example.com',
-                'name': 'Other User',
-                'password': 'password123'
-            }
-        )
-        assert create_response.status_code == 201
-        
-        # Login as other user to get token
-        login_response = await async_client.post(
-            '/api/auth/login',
-            json={
-                'email': 'other@example.com',
-                'password': 'password123',
-                'strategy': 'credentials'
-            }
-        )
-        assert login_response.status_code == 200
-        other_token = login_response.json()['access_token']
-        
-        # Upload a file as the other user
         image_data = self._create_test_image()
-        
-        # Save the original token from authenticated_client
-        original_auth = authenticated_client.headers.get('Authorization')
-        
-        # Temporarily use other user's token for upload
-        async_client.headers.update({'Authorization': f'Bearer {other_token}'})
-        
-        upload_url_response = await async_client.get(
+        upload_url_response = await other_user_client.get(
             '/api/files/upload-url',
-            params={'filename': 'avatar.png', 'content_type': 'image/png', 'used_for': 'avatar'}
+            params={'filename': 'avatar.png', 'content_type': 'image/png', 'used_for': 'avatar'},
         )
         upload_url_data = upload_url_response.json()
         file_key = upload_url_data['file_key']
         upload_url = upload_url_data['upload_url']
-        
-        await async_client.post(
+        await other_user_client.post(
             upload_url,
             files={'file': ('avatar.png', image_data, 'image/png')},
-            params={'used_for': 'avatar'}
+            params={'used_for': 'avatar'},
         )
-        
-        # Restore original user's token for authenticated_client
-        if original_auth:
-            authenticated_client.headers.update({'Authorization': original_auth})
-        else:
-            authenticated_client.headers.pop('Authorization', None)
-        
-        # Act: Try to set other user's file as avatar as original user (should fail)
         response = await authenticated_client.post(
             '/api/users/me/avatar',
-            json={'file_key': file_key}
+            json={'file_key': file_key},
         )
-        
-        # Assert
         assert response.status_code == 403
         data = response.json()
         assert 'status' in data or 'detail' in data
-        
-        # Clean up
-        async_client.headers.pop('Authorization', None)

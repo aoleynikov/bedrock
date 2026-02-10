@@ -1,9 +1,10 @@
 import uuid
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from src.config import settings
-from src.models.domain import User, UserCreate
+from src.models.domain import User, UserCreate, AdminUserCreate
 from src.services.user_service import UserService
 
 
@@ -237,3 +238,100 @@ class TestUserService:
         assert admin_user.id == existing_user.id
         assert admin_user.role == 'admin'
         assert admin_user.hashed_password == 'hashed'
+
+    async def test_delete_user_as_admin_cannot_delete_self(self, user_service: UserService):
+        """Test admin cannot delete own account."""
+        user_data = UserCreate(
+            email='self@example.com',
+            name='Self User',
+            password='password123'
+        )
+        created = await user_service.create_user(user_data)
+        with pytest.raises(ValueError, match='errors.user.cannot_delete_self'):
+            await user_service.delete_user_as_admin(created.id, created.id)
+
+    async def test_delete_user_as_admin_success(self, user_service: UserService):
+        """Test admin can delete another user."""
+        user_data = UserCreate(
+            email='other@example.com',
+            name='Other User',
+            password='password123'
+        )
+        created = await user_service.create_user(user_data)
+        admin_id = 'different-admin-id'
+        deleted = await user_service.delete_user_as_admin(created.id, admin_id)
+        assert deleted is True
+        assert await user_service.get_user_by_id(created.id) is None
+
+    async def test_create_user_with_role_duplicate_email(self, user_service: UserService):
+        """Test create_user_with_role with existing email raises error."""
+        await user_service.create_user(UserCreate(
+            email='role@example.com',
+            name='First',
+            password='password123'
+        ))
+        admin_data = AdminUserCreate(
+            email='role@example.com',
+            name='Second',
+            password='other456',
+            role='admin'
+        )
+        with pytest.raises(ValueError, match='errors.user.email_exists'):
+            await user_service.create_user_with_role(admin_data)
+
+    async def test_create_user_with_role_success(self, user_service: UserService):
+        """Test admin creating user with role."""
+        admin_data = AdminUserCreate(
+            email='newadmin@example.com',
+            name='New Admin',
+            password='adminpass',
+            role='admin'
+        )
+        user = await user_service.create_user_with_role(admin_data)
+        assert user.role == 'admin'
+        assert user.email == 'newadmin@example.com'
+
+    async def test_list_users_returns_paginated(self, user_service: UserService):
+        """Test list_users with skip and limit."""
+        for i in range(5):
+            await user_service.create_user(UserCreate(
+                email=f'list{i}@example.com',
+                name=f'User {i}',
+                password='password123'
+            ))
+        page1 = await user_service.list_users(skip=0, limit=2)
+        page2 = await user_service.list_users(skip=2, limit=2)
+        assert len(page1) == 2
+        assert len(page2) == 2
+        assert page1[0].email != page2[0].email
+
+    async def test_set_avatar_storage_not_configured(self, user_service: UserService):
+        """Test set_avatar when file_storage_service is None raises error."""
+        user_data = UserCreate(
+            email='avatar@example.com',
+            name='Avatar User',
+            password='password123'
+        )
+        user = await user_service.create_user(user_data)
+        assert user_service.file_storage_service is None
+        with pytest.raises(ValueError, match='errors.file.storage_not_configured'):
+            await user_service.set_avatar(user.id, 'some/file-key')
+
+    async def test_set_avatar_file_not_found(self, user_service: UserService, user_repository):
+        """Test set_avatar when file does not exist in storage raises error."""
+        storage = MagicMock()
+        storage.file_exists = AsyncMock(return_value=False)
+        service = UserService(user_repository, file_storage_service=storage)
+        user_data = UserCreate(
+            email='nofile@example.com',
+            name='No File User',
+            password='password123'
+        )
+        user = await service.create_user(user_data)
+        with pytest.raises(ValueError, match='errors.file.not_found'):
+            await service.set_avatar(user.id, 'missing/file-key')
+
+    async def test_update_user_not_found(self, user_service: UserService):
+        """Test update_user with non-existent user_id raises error."""
+        with pytest.raises(ValueError, match='errors.user.not_found'):
+            await user_service.update_user('nonexistent-id', {'name': 'Updated'})

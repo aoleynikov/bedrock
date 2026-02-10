@@ -4,18 +4,20 @@ set -e
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 image_name="bedrock-backend-integration-tests"
 env_file_path="$repo_root/${ENV_FILE:-env.local}"
+compose_file="$repo_root/docker-compose.yml"
+project_name="bedrock_test_$(date +%s)"
 
 cleanup() {
-  docker-compose -f "$repo_root/docker-compose.yml" down
+  docker compose -f "$compose_file" -p "$project_name" down -v
 }
 
 trap cleanup EXIT
 
-docker-compose -f "$repo_root/docker-compose.yml" up -d mongodb
+docker compose -f "$compose_file" -p "$project_name" up -d mongodb
 
 attempts=0
 until [ "$attempts" -ge 60 ]; do
-  mongo_container="$(docker-compose -f "$repo_root/docker-compose.yml" ps -q mongodb)"
+  mongo_container="$(docker compose -f "$compose_file" -p "$project_name" ps -q mongodb)"
   mongo_status="$(docker inspect -f '{{.State.Health.Status}}' "$mongo_container" 2>/dev/null || echo 'starting')"
   if [ "$mongo_status" = "healthy" ]; then
     break

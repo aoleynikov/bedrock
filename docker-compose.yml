@@ -56,10 +56,12 @@ services:
     restart: unless-stopped
     env_file:
       - ${ENV_FILE:-env.local}
+    environment:
+      - FILE_STORAGE_PATH=/data/uploads
     volumes:
       - ./health_check.py:/health_check.py:ro
       - ./backend/src:/app/src
-      - ./backend/storage:/app/storage
+      - app_data:/data
       - ./backend/tests:/app/tests
       - ./backend/pytest.ini:/app/pytest.ini
       - ./backend/reports:/app/reports
@@ -82,9 +84,11 @@ services:
       - "${WORKER_METRICS_PORT:-8001}:8001"
     env_file:
       - ${ENV_FILE:-env.local}
+    environment:
+      - FILE_STORAGE_PATH=/data/uploads
     volumes:
       - ./backend/src:/app/src
-      - ./backend/storage:/app/storage
+      - app_data:/data
     logging: *default-logging
     depends_on:
       mongodb:
@@ -105,9 +109,11 @@ services:
     command: celery -A src.worker.celery beat --loglevel=info
     env_file:
       - ${ENV_FILE:-env.local}
+    environment:
+      - FILE_STORAGE_PATH=/data/uploads
     volumes:
       - ./backend/src:/app/src
-      - ./backend/storage:/app/storage
+      - app_data:/data
     logging: *default-logging
     depends_on:
       mongodb:
@@ -251,6 +257,7 @@ services:
 volumes:
   mongodb_data:
   rabbitmq_data:
+  app_data:
   prometheus_data:
   grafana_data:
   loki_data:

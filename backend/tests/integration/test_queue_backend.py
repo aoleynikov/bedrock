@@ -1,7 +1,6 @@
 from datetime import datetime, timedelta
 
 import pytest
-from httpx import AsyncClient
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from src.tasks.file_cleanup.task import _run_cleanup_coordinator
@@ -19,8 +18,9 @@ def in_memory_queue() -> InMemoryQueueBackend:
 
 
 @pytest.mark.integration
+@pytest.mark.asyncio
 async def test_example_task_enqueue_recorded(
-    authenticated_client: AsyncClient,
+    authenticated_client,
     in_memory_queue: InMemoryQueueBackend,
 ) -> None:
     correlation_id = 'test-correlation-id'
@@ -29,11 +29,9 @@ async def test_example_task_enqueue_recorded(
         params={'message': 'Test task message'},
         headers={'X-Correlation-ID': correlation_id},
     )
-
     assert response.status_code == 200
     tasks = in_memory_queue.get_tasks()
     assert len(tasks) == 1
-
     task = tasks[0]
     assert task.task_name == 'example_task'
     assert task.kwargs['message'] == 'Test task message'
