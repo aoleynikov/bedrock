@@ -23,7 +23,7 @@ celery_app.conf.update(
     task_soft_time_limit=25 * 60,
     worker_hijack_root_logger=False,
     worker_redirect_stdouts=False,
-    imports=('src.tasks.example_task', 'src.tasks.file_cleanup.task', 'src.tasks.file_cleanup.pagination', 'src.tasks.ensure_admin', 'src.tasks.startup'),
+    imports=('src.tasks.file_cleanup.task', 'src.tasks.file_cleanup.pagination', 'src.tasks.ensure_admin', 'src.tasks.startup'),
     autodiscover_tasks=['src.tasks'],
     beat_schedule={
         'cleanup-unused-files': {

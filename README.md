@@ -15,7 +15,7 @@ Production-ready full stack boilerplate with FastAPI, MongoDB, RabbitMQ, Celery,
 - API: http://localhost:8000 (docs at `/docs`)
 - RabbitMQ management: http://localhost:15672 (default guest/guest, change before production)
 - Prometheus: http://localhost:9090
-- Grafana: http://localhost:3000 (default admin/admin, change before production)
+- Grafana: http://localhost:3000 (default admin/admin, change before production). Logs dashboard: http://localhost:3000/d/bedrock-logs
 - Loki: http://localhost:3100
 
 ## Quick Start

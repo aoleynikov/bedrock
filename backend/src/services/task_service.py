@@ -13,65 +13,6 @@ class TaskService(BaseService):
     def __init__(self):
         super().__init__()
     
-    async def create_example_task(self, message: str, correlation_id: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Create and enqueue an example task.
-        
-        Business rules:
-        - Message must be provided
-        - Task is enqueued with correlation ID for tracking
-        """
-        if not message or not message.strip():
-            raise ValueError('errors.task.message_required')
-        
-        task = enqueue('example_task', message=message, correlation_id=correlation_id)
-        
-        self._log_info(
-            f'Task created: {task.id}',
-            task_id=task.id,
-            correlation_id=correlation_id
-        )
-        
-        return {
-            'task_id': task.id,
-            'status': 'pending',
-            'message': message
-        }
-
-    async def trigger_cleanup_task(
-        self,
-        max_age_hours: int = 6,
-        correlation_id: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Enqueue the cleanup_unused_files task (admin-only).
-
-        Business rules:
-        - max_age_hours must be positive
-        - Task is enqueued with correlation_id for tracking
-        """
-        if max_age_hours < 1:
-            raise ValueError('errors.task.cleanup_max_age_invalid')
-
-        task = enqueue(
-            'cleanup_unused_files',
-            max_age_hours=max_age_hours,
-            correlation_id=correlation_id
-        )
-
-        self._log_info(
-            f'Cleanup task enqueued: {task.id}',
-            task_id=task.id,
-            correlation_id=correlation_id,
-            max_age_hours=max_age_hours
-        )
-
-        return {
-            'task_id': task.id,
-            'status': 'pending',
-            'max_age_hours': max_age_hours
-        }
-
     async def get_task_status(self, task_id: str) -> Dict[str, Any]:
         """
         Get task status by ID.

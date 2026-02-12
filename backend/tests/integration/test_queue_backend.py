@@ -5,38 +5,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from src.tasks.file_cleanup.task import _run_cleanup_coordinator
 from src.tasks.startup import _run_startup_tasks
-from src.tasks.queue_backend import InMemoryQueueBackend, get_queue_backend
-
-
-@pytest.fixture
-def in_memory_queue() -> InMemoryQueueBackend:
-    backend = get_queue_backend()
-    if not isinstance(backend, InMemoryQueueBackend):
-        pytest.skip('In-memory queue backend not enabled')
-    backend.clear()
-    return backend
-
-
-@pytest.mark.integration
-@pytest.mark.asyncio
-async def test_example_task_enqueue_recorded(
-    authenticated_client,
-    in_memory_queue: InMemoryQueueBackend,
-) -> None:
-    correlation_id = 'test-correlation-id'
-    response = await authenticated_client.post(
-        '/api/tasks/example',
-        params={'message': 'Test task message'},
-        headers={'X-Correlation-ID': correlation_id},
-    )
-    assert response.status_code == 200
-    tasks = in_memory_queue.get_tasks()
-    assert len(tasks) == 1
-    task = tasks[0]
-    assert task.task_name == 'example_task'
-    assert task.kwargs['message'] == 'Test task message'
-    assert task.kwargs['correlation_id'] == correlation_id
-    assert response.json()['task_id'] == task.task_id
+from src.tasks.queue_backend import InMemoryQueueBackend
 
 
 @pytest.mark.integration

@@ -4,7 +4,7 @@ set -e
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 image_name="bedrock-backend-integration-tests"
 env_file_path="$repo_root/${ENV_FILE:-env.local}"
-compose_file="$repo_root/docker-compose.yml"
+compose_file="$repo_root/docker-compose.integration.yml"
 project_name="bedrock_test_$(date +%s)"
 
 cleanup() {

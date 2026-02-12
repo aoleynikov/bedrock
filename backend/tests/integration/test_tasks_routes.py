@@ -1,39 +1,17 @@
 import pytest
 from httpx import AsyncClient
 
+from src.tasks.startup import _run_startup_tasks
+
 
 @pytest.mark.integration
 class TestTasksRoutes:
-    async def test_create_task_success(self, authenticated_client: AsyncClient):
-        """Test successful task creation."""
-        response = await authenticated_client.post(
-            '/api/tasks/example',
-            params={'message': 'Test task message'},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert 'task_id' in data
-        assert 'status' in data
-        assert 'message' in data
-        assert data['task_id'] is not None
-
-    async def test_create_task_unauthorized(self, client: AsyncClient):
-        """Test task creation without authentication."""
-        response = await client.post(
-            '/api/tasks/example',
-            params={'message': 'Test task message'},
-        )
-        assert response.status_code == 401
-        data = response.json()
-        assert data['status'] in ('error', 'common.error')
-
-    async def test_get_task_status_success(self, authenticated_client: AsyncClient):
-        """Test getting task status."""
-        create_response = await authenticated_client.post(
-            '/api/tasks/example',
-            params={'message': 'Test task message'},
-        )
-        task_id = create_response.json()['task_id']
+    async def test_get_task_status_success(
+        self, authenticated_client: AsyncClient, in_memory_queue
+    ):
+        """Test getting task status for an enqueued task."""
+        result = await _run_startup_tasks('corr-id', 'coordinator-id')
+        task_id = result['task_ids'][0]
         response = await authenticated_client.get(f'/api/tasks/{task_id}')
         assert response.status_code == 200
         data = response.json()
@@ -56,44 +34,3 @@ class TestTasksRoutes:
         assert response.status_code == 401
         data = response.json()
         assert data['status'] in ('error', 'common.error')
-
-    async def test_trigger_cleanup_admin_success(self, admin_client: AsyncClient):
-        """Test admin can trigger cleanup task."""
-        response = await admin_client.post(
-            '/api/tasks/cleanup',
-            params={'max_age_hours': 6},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert 'task_id' in data
-        assert data['status'] == 'pending'
-        assert data['max_age_hours'] == 6
-        assert 'message' in data
-
-    async def test_trigger_cleanup_forbidden(self, authenticated_client: AsyncClient):
-        """Test non-admin cannot trigger cleanup task."""
-        response = await authenticated_client.post(
-            '/api/tasks/cleanup',
-            params={'max_age_hours': 6},
-        )
-        assert response.status_code == 403
-        data = response.json()
-        assert data['status'] in ('error', 'common.error')
-
-    async def test_trigger_cleanup_unauthorized(self, client: AsyncClient):
-        """Test unauthenticated request cannot trigger cleanup task."""
-        response = await client.post(
-            '/api/tasks/cleanup',
-            params={'max_age_hours': 6},
-        )
-        assert response.status_code == 401
-
-    async def test_trigger_cleanup_invalid_max_age(self, admin_client: AsyncClient):
-        """Test cleanup with invalid max_age_hours returns validation error."""
-        response = await admin_client.post(
-            '/api/tasks/cleanup',
-            params={'max_age_hours': 0},
-        )
-        assert response.status_code == 400
-        data = response.json()
-        assert 'detail' in data

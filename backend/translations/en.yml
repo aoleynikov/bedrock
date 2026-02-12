@@ -29,8 +29,6 @@ errors:
     s3_bucket_required: "S3 bucket name must be configured for S3 storage"
   task:
     id_required: "Task ID is required"
-    message_required: "Task message is required"
-    cleanup_max_age_invalid: "max_age_hours must be at least 1"
   user:
     email_exists: "User with this email already exists"
     cannot_delete_self: "You cannot delete your own account"

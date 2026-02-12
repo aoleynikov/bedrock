@@ -8,6 +8,7 @@ from httpx import ASGITransport, AsyncClient
 
 from src.main import app
 from src.database.connection import DatabaseConnection
+from src.tasks.queue_backend import InMemoryQueueBackend, get_queue_backend
 from src.config import settings
 from src.repositories.user_repository import UserRepository
 from src.services.user_service import UserService
@@ -27,6 +28,15 @@ from tests.integration.user_helpers import (
 @pytest.fixture(scope='session')
 def api_base_url():
     return os.getenv('API_BASE_URL', 'http://localhost:8000')
+
+
+@pytest.fixture
+def in_memory_queue() -> InMemoryQueueBackend:
+    backend = get_queue_backend()
+    if not isinstance(backend, InMemoryQueueBackend):
+        pytest.skip('In-memory queue backend not enabled')
+    backend.clear()
+    return backend
 
 
 @pytest.fixture
