@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     admin_default_email: str
     admin_default_name: str
     admin_default_password: str
+    openai_api_key: str = ''
+    openai_model: str = 'gpt-4o-mini'
+    openai_image_model: str = 'dall-e-3'
 
     model_config = SettingsConfigDict(
         env_file='.env',
