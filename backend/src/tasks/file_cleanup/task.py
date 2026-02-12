@@ -115,18 +115,28 @@ async def _run_cleanup_coordinator(max_age_hours: int, correlation_id: str, task
     Database connection: Motor uses connection pooling automatically.
     We ensure connection exists, but Motor reuses connections from pool.
     """
-    # Ensure database is connected (Motor handles connection pooling automatically)
+    logger.info(
+        'File cleanup coordinator starting',
+        extra={
+            'correlation_id': correlation_id,
+            'task_id': task_id,
+            'max_age_hours': max_age_hours,
+        }
+    )
+
     try:
         db = DatabaseConnection.get_db()
     except RuntimeError:
-        # First connection attempt - Motor will create connection pool
+        logger.info(
+            'Database not connected, establishing connection pool',
+            extra={'correlation_id': correlation_id}
+        )
         await DatabaseConnection.connect()
         db = DatabaseConnection.get_db()
-    
+
     uploaded_file_repository = UploadedFileRepository(db)
-    
-    # Create chunks for each file type
-    file_types = ['avatar', 'document', None]  # None for untyped
+
+    file_types = ['avatar', 'document', None]
     all_chunks = []
     
     for file_type in file_types:
@@ -171,15 +181,16 @@ async def _run_cleanup_coordinator(max_age_hours: int, correlation_id: str, task
             )
     
     logger.info(
-        f'Queued {len(queued_tasks)} chunk processing tasks',
+        'File cleanup chunks queued',
         extra={
             'correlation_id': correlation_id,
             'task_id': task_id,
             'chunk_count': len(all_chunks),
-            'queued_tasks': len(queued_tasks)
+            'queued_tasks': len(queued_tasks),
+            'task_ids': queued_tasks,
         }
     )
-    
+
     return {
         'status': 'coordinated',
         'max_age_hours': max_age_hours,
@@ -328,9 +339,23 @@ async def _run_cleanup_chunk(
             user_repository
         )
     
-    # Process chunk with pagination
     result = await handler.cleanup_files(max_age_hours, skip=skip, limit=limit)
-    
+
+    logger.info(
+        'File cleanup chunk completed',
+        extra={
+            'correlation_id': correlation_id,
+            'task_id': task_id,
+            'file_type': file_type,
+            'skip': skip,
+            'limit': limit,
+            'processed': result.get('processed', 0),
+            'deleted': result.get('deleted', 0),
+            'skipped': result.get('skipped', 0),
+            'failed': result.get('failed', 0),
+        }
+    )
+
     return {
         'status': 'completed',
         'file_type': file_type,

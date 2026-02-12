@@ -60,9 +60,10 @@ class TaskService(BaseService):
         )
 
         self._log_info(
-            f'Cleanup task created: {task.id}',
+            f'Cleanup task enqueued: {task.id}',
             task_id=task.id,
-            correlation_id=correlation_id
+            correlation_id=correlation_id,
+            max_age_hours=max_age_hours
         )
 
         return {

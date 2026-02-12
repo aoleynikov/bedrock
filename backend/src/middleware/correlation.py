@@ -35,7 +35,7 @@ class CorrelationMiddleware(BaseHTTPMiddleware):
         path = request.url.path
 
         logger.info(
-            f'{method} {path} - Request started',
+            'Request started',
             extra={
                 'correlation_id': correlation_id,
                 'method': method,
@@ -63,7 +63,7 @@ class CorrelationMiddleware(BaseHTTPMiddleware):
             ).observe(duration)
 
             logger.info(
-                f'{method} {path} - Request completed',
+                'Request completed',
                 extra={
                     'correlation_id': correlation_id,
                     'method': method,
@@ -95,7 +95,7 @@ class CorrelationMiddleware(BaseHTTPMiddleware):
             ).observe(duration)
 
             logger.error(
-                f'{method} {path} - Request failed: {str(e)}',
+                f'Request failed: {str(e)}',
                 extra={
                     'correlation_id': correlation_id,
                     'method': method,

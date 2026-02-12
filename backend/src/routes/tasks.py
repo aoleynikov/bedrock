@@ -5,8 +5,10 @@ from src.i18n.translator import get_translator
 from src.exceptions.error_handlers import raise_translated_error
 from src.auth.dependencies import get_current_user, require_roles
 from src.models.domain import User
+from src.logging.logger import get_logger
 
 router = APIRouter()
+logger = get_logger(__name__, 'api')
 
 
 @router.post('/tasks/example')
@@ -49,8 +51,25 @@ async def trigger_cleanup(
     translator = get_translator(request)
     correlation_id = getattr(request.state, 'correlation_id', None)
 
+    logger.info(
+        'File cleanup triggered via API',
+        extra={
+            'correlation_id': correlation_id,
+            'max_age_hours': max_age_hours,
+            'user_id': str(current_user.id) if current_user else None,
+        }
+    )
+
     try:
         result = await task_service.trigger_cleanup_task(max_age_hours, correlation_id)
+        logger.info(
+            'File cleanup task queued successfully',
+            extra={
+                'correlation_id': correlation_id,
+                'task_id': result['task_id'],
+                'max_age_hours': max_age_hours,
+            }
+        )
         return {
             'task_id': result['task_id'],
             'status': result['status'],
