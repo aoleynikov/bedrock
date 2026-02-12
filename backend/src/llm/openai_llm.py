@@ -1,11 +1,11 @@
-import json
 import base64
+import json
 from typing import Optional
 
 from openai import AsyncOpenAI
 
-from src.llm.base import Llm
 from src.config import settings
+from src.llm.base import Llm
 
 
 class OpenAILlm(Llm):
@@ -19,7 +19,7 @@ class OpenAILlm(Llm):
         self._model = model or settings.openai_model
         self._image_model = image_model or settings.openai_image_model
 
-    async def process_text(
+    async def _process_text_impl(
         self, user_prompt: str, system_prompt: str | None = None
     ) -> str:
         messages = []
@@ -34,7 +34,7 @@ class OpenAILlm(Llm):
         content = response.choices[0].message.content
         return content or ''
 
-    async def process_json(
+    async def _process_json_impl(
         self,
         user_prompt: str,
         system_prompt: str | None = None,
@@ -65,7 +65,7 @@ class OpenAILlm(Llm):
             return {}
         return json.loads(content)
 
-    async def generate_image(self, prompt: str) -> bytes:
+    async def _generate_image_impl(self, prompt: str) -> bytes:
         response = await self._client.images.generate(
             model=self._image_model,
             prompt=prompt,

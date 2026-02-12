@@ -16,7 +16,11 @@ datasources:
     editable: true
     jsonData:
       derivedFields:
-        - name: 'Filter by correlation ID'
+        - name: 'All logs by correlation'
           matcherType: label
           matcherRegex: correlation_id
-          url: '/d/bedrock-logs?var-correlation_id=$${__value.raw}'
+          url: '/d/bedrock-logs-correlation?var-correlation_id=$${__value.raw}'
+        - name: 'All logs by correlation'
+          matcherType: regex
+          matcherRegex: '([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
+          url: '/d/bedrock-logs-correlation?var-correlation_id=$${__value.raw}'

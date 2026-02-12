@@ -58,6 +58,7 @@ services:
       - ${ENV_FILE:-env.local}
     environment:
       - FILE_STORAGE_PATH=/data/uploads
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
     volumes:
       - ./health_check.py:/health_check.py:ro
       - ./backend/src:/app/src
@@ -86,6 +87,7 @@ services:
       - ${ENV_FILE:-env.local}
     environment:
       - FILE_STORAGE_PATH=/data/uploads
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
     volumes:
       - ./backend/src:/app/src
       - app_data:/data
@@ -111,6 +113,7 @@ services:
       - ${ENV_FILE:-env.local}
     environment:
       - FILE_STORAGE_PATH=/data/uploads
+      - LOG_LEVEL=${LOG_LEVEL:-DEBUG}
     volumes:
       - ./backend/src:/app/src
       - app_data:/data
@@ -215,6 +218,7 @@ services:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/logs.json
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning

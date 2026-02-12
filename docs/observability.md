@@ -43,10 +43,20 @@ If `curl` returns "ready", Grafana should be able to connect. If you still see e
  - Promtail scrapes Docker container logs, parses the JSON, and extracts labels: `service` (compose service name), `container`, `level`, `logger`, `correlation_id`, `endpoint`, `task_name`, `task_id`. Logs are pushed to Loki.
  - Grafana has both Prometheus and Loki datasources provisioned.
  
-## Logs dashboard (browser)
-Open **Grafana** → **Dashboards** → **Logs** (or go to `/d/bedrock-logs`).
+## Logs dashboards (browser)
 
-Columns: **time** (Grafana), **service**, **url/task name** (endpoint for API, task_name for Celery), **message**.
+**Logs** is the default Grafana home dashboard. Open Grafana → you land on Logs, or go to `/d/bedrock-logs`.
+
+### Main Logs (INFO+)
+
+Shows INFO, WARNING, ERROR, CRITICAL (excludes DEBUG). Columns: **time**, **service**, **url/task name**, **message**.
 
 - **Service filter**: Use the **Service** dropdown to filter by `backend`, `worker`, or `beat`. Default is backend + worker.
-- **Filter by correlation ID**: Click a log entry, then click the correlation_id link that appears in the log details. The view filters to show only logs for that request or task. Use **Show all logs** (top of dashboard) to clear the filter.
+- **Filter by correlation ID**: Click a log entry to expand it. The correlation_id appears in the log line and as a clickable **All logs by correlation** link in the log details. Click it to open the correlation dashboard with that ID pre-filled.
+- **All logs (incl. DEBUG) by correlation**: Link to drill into one request/task with full debug logs.
+
+### Logs by correlation (all levels)
+
+Shows all logs including DEBUG for a single request/task. Use when you need the full trace (e.g. LLM prompts/results).
+
+- Open from main logs via the correlation_id link, or go to `/d/bedrock-logs-correlation` and paste a correlation ID.
