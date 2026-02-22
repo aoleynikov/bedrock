@@ -5,6 +5,7 @@ import httpx
 from typing import AsyncGenerator
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from httpx import ASGITransport, AsyncClient
+from httpx_ws.transport import ASGIWebSocketTransport
 
 from src.main import app
 from src.database.connection import DatabaseConnection
@@ -85,6 +86,16 @@ async def client(db_session) -> AsyncGenerator[AsyncClient, None]:
     """Async HTTP client for the app. Same event loop as db_session so DB works."""
     async with AsyncClient(
         transport=ASGITransport(app=app),
+        base_url='http://test',
+    ) as c:
+        yield c
+
+
+@pytest.fixture
+async def ws_client(db_session) -> AsyncGenerator[AsyncClient, None]:
+    """Async client with WebSocket support. Same event loop as db_session; no separate thread."""
+    async with AsyncClient(
+        transport=ASGIWebSocketTransport(app=app),
         base_url='http://test',
     ) as c:
         yield c

@@ -23,7 +23,9 @@ from src.routes import tasks
 from src.routes import logs
 from src.routes import auth
 from src.routes import files
+from src.routes import websocket
 from src.tasks.queue import enqueue
+from src.websocket.queue_consumer import consume_ws_queue
 from pathlib import Path
 
 logger = get_logger(__name__)
@@ -53,7 +55,14 @@ async def lifespan(app: FastAPI):
             await asyncio.sleep(2)
     if not enqueued:
         raise RuntimeError('Failed to enqueue startup tasks')
+    ws_consumer_task = asyncio.create_task(consume_ws_queue())
+    app.state.ws_consumer_task = ws_consumer_task
     yield
+    ws_consumer_task.cancel()
+    try:
+        await ws_consumer_task
+    except asyncio.CancelledError:
+        pass
     await DatabaseConnection.disconnect()
     logger.info('Disconnected from MongoDB')
 
@@ -92,6 +101,7 @@ app.include_router(users.router, prefix='/api', tags=['users'])
 app.include_router(files.router, prefix='/api', tags=['files'])
 app.include_router(tasks.router, prefix='/api', tags=['tasks'])
 app.include_router(logs.router, prefix='/api', tags=['logs'])
+app.include_router(websocket.router, prefix='/api', tags=['websocket'])
 
 
 @app.get('/')

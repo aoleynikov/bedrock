@@ -135,6 +135,7 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+        VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:8000}
     container_name: bedrock_frontend_user
     ports:
       - "${FRONTEND_USER_PORT:-5173}:5173"
@@ -148,6 +149,7 @@ services:
       - ${ENV_FILE:-env.local}
     environment:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:8000}
       PW_COVERAGE: ${PW_COVERAGE:-false}
     volumes:
       - ./health_check.py:/health_check.py:ro

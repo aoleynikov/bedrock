@@ -5,6 +5,10 @@ import istanbul from 'vite-plugin-istanbul'
 const coverageEnabled = process.env.PW_COVERAGE === 'true'
 
 export default defineConfig({
+  test: {
+    environment: 'jsdom',
+    globals: true,
+  },
   server: {
     allowedHosts: ['bedrock_frontend_user', 'localhost', '127.0.0.1'],
   },

@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     mongodb_url: str = 'mongodb://localhost:27017'
     mongodb_db_name: str = 'bedrock'
     rabbitmq_url: str = 'amqp://guest:guest@localhost:5672//'
+    ws_messages_queue: str = 'ws_messages'
     api_host: str = '0.0.0.0'
     api_port: int = 8000
     worker_metrics_port: int = 8001
