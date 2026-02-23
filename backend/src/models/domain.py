@@ -55,3 +55,12 @@ class UploadedFile(BaseModel):
     file_size: int
     used_for: Optional[str] = None
     created_at: Optional[datetime] = None
+
+
+class ChatMessage(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    content: str
+    participant_username: str
+    created_at: datetime
