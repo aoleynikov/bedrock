@@ -64,7 +64,7 @@ class ChatMessage(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
-    chat_id: str
+    chat_id: str = ""
     participant_username: str
     content: str
     created_at: datetime
