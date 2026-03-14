@@ -1,7 +1,10 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
-from pydantic_core import PydanticCustomError
+from abc import ABC, abstractmethod
+from datetime import datetime, timezone
 from typing import Optional, Literal
-from datetime import datetime
+from uuid import uuid4
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, PrivateAttr, field_validator
+from pydantic_core import PydanticCustomError
 
 
 class UserBase(BaseModel):
@@ -61,6 +64,42 @@ class ChatMessage(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
+    chat_id: str
+    user_id: str
     content: str
-    participant_username: str
     created_at: datetime
+
+
+class ChatObserver(ABC):
+    @abstractmethod
+    async def on_message(self, message: ChatMessage) -> None: ...
+
+
+class Chat(BaseModel):
+    model_config = ConfigDict(from_attributes=True, arbitrary_types_allowed=True)
+
+    id: Optional[str] = None
+    participant_ids: list[str]
+    created_by: str
+    messages: list[ChatMessage] = []
+    created_at: Optional[datetime] = None
+
+    _observers: list[ChatObserver] = PrivateAttr(default_factory=list)
+
+    def add_observer(self, observer: ChatObserver) -> None:
+        self._observers.append(observer)
+
+    async def add_message(self, user_id: str, content: str) -> ChatMessage:
+        if user_id not in self.participant_ids:
+            raise ValueError(f"User '{user_id}' is not a participant in this chat")
+        message = ChatMessage(
+            id=str(uuid4()),
+            chat_id=self.id or "",
+            user_id=user_id,
+            content=content,
+            created_at=datetime.now(timezone.utc),
+        )
+        self.messages.append(message)
+        for observer in self._observers:
+            await observer.on_message(message)
+        return message
