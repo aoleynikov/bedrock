@@ -65,7 +65,7 @@ class ChatMessage(BaseModel):
 
     id: str
     chat_id: str
-    user_id: str
+    participant_username: str
     content: str
     created_at: datetime
 
@@ -89,13 +89,13 @@ class Chat(BaseModel):
     def add_observer(self, observer: ChatObserver) -> None:
         self._observers.append(observer)
 
-    async def add_message(self, user_id: str, content: str) -> ChatMessage:
-        if user_id not in self.participant_ids:
-            raise ValueError(f"User '{user_id}' is not a participant in this chat")
+    async def add_message(self, participant_username: str, content: str) -> ChatMessage:
+        if participant_username not in self.participant_ids:
+            raise ValueError(f"User '{participant_username}' is not a participant in this chat")
         message = ChatMessage(
             id=str(uuid4()),
             chat_id=self.id or "",
-            user_id=user_id,
+            participant_username=participant_username,
             content=content,
             created_at=datetime.now(timezone.utc),
         )
