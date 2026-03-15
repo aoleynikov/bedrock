@@ -1,0 +1,41 @@
+name: bedrock-frontend-admin
+base: ubuntu@22.04
+build-base: ubuntu@22.04
+version: "0.1"
+summary: Bedrock admin frontend (Vite dev server)
+description: |
+  Vite/React dev server for the admin frontend on port 5174.
+
+  NOTE: This runs the Vite development server, suitable for local development.
+  For a production deployment, replace the service command with a static-file
+  server after `npm run build` produces the dist/ directory.
+
+  Build:
+    rockcraft pack --rockfile rockcraft.yaml
+    rockcraft.skopeo copy oci-archive:bedrock-frontend-admin_0.1_amd64.rock \
+      docker-daemon:bedrock-frontend-admin:latest
+
+  Run (pass API URL at runtime):
+    docker run -p 5174:5174 \
+      -e VITE_API_URL=http://localhost:8000 \
+      bedrock-frontend-admin:latest
+
+platforms:
+  amd64:
+
+parts:
+  frontend:
+    plugin: npm
+    source: .
+    npm-include-node: true
+    npm-node-version: "18.20.4"
+
+services:
+  frontend-admin:
+    override: replace
+    command: npm run dev -- --host 0.0.0.0 --port 5174
+    startup: enabled
+    working-dir: /
+    environment:
+      NODE_ENV: development
+      # VITE_API_URL is injected at runtime via docker run -e

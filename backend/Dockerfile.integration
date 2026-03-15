@@ -1,11 +1,49 @@
+# syntax=docker/dockerfile:1
+# Canonical OCI image definition: backend/rockcraft.tests.yaml
+# Runs the integration test suite.  Requires MongoDB reachable on the same
+# Docker network (see docker-compose.integration.yml and
+# scripts/run_integration_tests_docker.sh).
+
+# ── build stage: compile C extensions ──────────────────────────────────────
+FROM python:3.11-slim AS build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        gcc \
+        libffi-dev \
+        libssl-dev \
+        libjpeg-dev \
+        zlib1g-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt /tmp/requirements.txt
+
+RUN python3 -m venv /venv \
+    && /venv/bin/pip install --no-cache-dir --upgrade pip \
+    && /venv/bin/pip install --no-cache-dir -r /tmp/requirements.txt
+
+# ── runtime stage ───────────────────────────────────────────────────────────
 FROM python:3.11-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libffi8 \
+        libssl3 \
+        libjpeg62-turbo \
+        zlib1g \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=build /venv /venv
+
+ENV PATH="/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    ENV=test
+
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY src/ ./src/
-COPY tests/ ./tests/
+COPY src/     ./src/
+COPY tests/   ./tests/
 COPY pytest.ini ./pytest.ini
+
 RUN mkdir -p /app/storage
-ENV PYTHONUNBUFFERED=1
-ENV ENV=test
-CMD ["python", "-m", "pytest", "-o", "addopts=", "tests/integration", "-m", "integration", "-v", "--strict-markers", "--tb=short", "--asyncio-mode=auto", "--cov=src", "--cov-report=term-missing", "--cov-report=term"]
+
+CMD ["python3", "-m", "pytest", "-o", "addopts=", \
+     "tests/integration", "-m", "integration", "-v", "--strict-markers", "--tb=short", \
+     "--asyncio-mode=auto", "--cov=src", "--cov-report=term-missing", "--cov-report=term"]

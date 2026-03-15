@@ -1,0 +1,42 @@
+name: bedrock-frontend-user
+base: ubuntu@22.04
+build-base: ubuntu@22.04
+version: "0.1"
+summary: Bedrock user-facing frontend (Vite dev server)
+description: |
+  Vite/React dev server for the user-facing frontend on port 5173.
+
+  NOTE: This runs the Vite development server, suitable for local development.
+  For a production deployment, replace the service command with a static-file
+  server after `npm run build` produces the dist/ directory.
+
+  Build:
+    rockcraft pack --rockfile rockcraft.yaml
+    rockcraft.skopeo copy oci-archive:bedrock-frontend-user_0.1_amd64.rock \
+      docker-daemon:bedrock-frontend-user:latest
+
+  Run (pass API URLs at runtime):
+    docker run -p 5173:5173 \
+      -e VITE_API_URL=http://localhost:8000 \
+      -e VITE_WS_URL=ws://localhost:8000 \
+      bedrock-frontend-user:latest
+
+platforms:
+  amd64:
+
+parts:
+  frontend:
+    plugin: npm
+    source: .
+    npm-include-node: true
+    npm-node-version: "18.20.4"
+
+services:
+  frontend-user:
+    override: replace
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    startup: enabled
+    working-dir: /
+    environment:
+      NODE_ENV: development
+      # VITE_API_URL and VITE_WS_URL are injected at runtime via docker run -e
